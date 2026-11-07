@@ -22,6 +22,29 @@ public class OutboxStore {
 	public record OutboxRow(long id, String aggregateId, String eventType, String payload, int attempts) {
 	}
 
+	/**
+	 * Enqueues an event into the transactional outbox.
+	 * aggregateId can be Long or String; numeric strings are parsed to Long so databases with BIGINT
+	 * column types accept them without type mismatch.
+	 */
+	@Transactional
+	public int enqueue(String eventId, Object aggregateId, String eventType, String payload) {
+		Object convertedAggregateId = aggregateId;
+		if (aggregateId instanceof String s) {
+			try {
+				convertedAggregateId = Long.parseLong(s);
+			}
+			catch (NumberFormatException ignored) {
+				convertedAggregateId = s;
+			}
+		}
+		return jdbc.update("""
+				INSERT INTO outbox (event_id, aggregate_id, event_type, payload)
+				VALUES (?, ?, ?, ?)
+				ON CONFLICT (event_id) DO NOTHING
+				""", eventId, convertedAggregateId, eventType, payload);
+	}
+
 	/** Leases due rows: PENDING -> SENDING, attempts incremented, one short transaction. */
 	@Transactional
 	public List<OutboxRow> claim(int batchSize, int maxAttempts) {

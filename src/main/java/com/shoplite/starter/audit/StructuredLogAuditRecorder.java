@@ -18,12 +18,15 @@ public class StructuredLogAuditRecorder implements AuditRecorder {
 	@Override
 	public void record(AuditEvent event) {
 		LoggingEventBuilder builder = log.atInfo()
+			.addKeyValue("event_id", event.eventId())
+			.addKeyValue("event_type", event.eventType())
 			.addKeyValue("actor_sub", event.actorSub())
 			.addKeyValue("actor_realm", event.actorRealm() == null ? "" : event.actorRealm())
 			.addKeyValue("action", event.action())
 			.addKeyValue("target_type", event.targetType() == null ? "" : event.targetType())
 			.addKeyValue("target_id", event.targetId() == null ? "" : event.targetId())
 			.addKeyValue("outcome", event.outcome())
+			.addKeyValue("trace_id", event.traceId() == null ? "" : event.traceId())
 			.addKeyValue("occurred_at", event.occurredAt().toString());
 		event.details().forEach(builder::addKeyValue);
 		builder.log("audit_event");
