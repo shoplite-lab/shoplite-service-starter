@@ -62,6 +62,16 @@ class ShopliteSecurityTests {
 	}
 
 	@Test
+	void staffPrincipalClaimCanStayPreferredUsernameForServicesThatLogItToday() {
+		NimbusJwtDecoder decoder = decoder(STAFF, List.of());
+		Jwt jwt = decoder.decode(sign(STAFF, List.of(), Map.of("preferred_username", "alice")));
+
+		Authentication auth = ShopliteJwtSupport.staffConverter("preferred_username").convert(jwt);
+
+		assertThat(auth.getName()).isEqualTo("alice");
+	}
+
+	@Test
 	void wrongIssuerIsRejected() {
 		NimbusJwtDecoder decoder = decoder(STAFF, List.of());
 		String customerToken = sign(CUSTOMERS, List.of(), Map.of("groups", List.of("super-admin")));

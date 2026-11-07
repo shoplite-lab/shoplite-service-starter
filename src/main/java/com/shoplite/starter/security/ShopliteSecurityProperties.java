@@ -20,6 +20,21 @@ public class ShopliteSecurityProperties {
 	 */
 	private List<String> audiences = List.of();
 
+	/**
+	 * JWT claim used as the principal name of a staff token. The opaque {@code sub} by default, so
+	 * logs and audit rows never carry a username. A service that logged {@code preferred_username}
+	 * before adopting the starter may set that to keep its behaviour until it moves to {@code sub}.
+	 */
+	private String staffPrincipalClaim = "sub";
+
+	public String getStaffPrincipalClaim() {
+		return staffPrincipalClaim;
+	}
+
+	public void setStaffPrincipalClaim(String staffPrincipalClaim) {
+		this.staffPrincipalClaim = staffPrincipalClaim;
+	}
+
 	public boolean isEnabled() {
 		return enabled;
 	}

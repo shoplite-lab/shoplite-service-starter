@@ -52,7 +52,7 @@ public class ShopliteSecurityAutoConfiguration {
 	@ConditionalOnMissingBean(SecurityFilterChain.class)
 	public SecurityFilterChain shopliteSecurityFilterChain(HttpSecurity http,
 			ShopliteSecurityProperties properties,
-			ObjectProvider<JwtDecoder> customerDecoderProvider,
+			ObjectProvider<JwtDecoder> decoderProvider,
 			ObjectProvider<ShopliteAuthorizeRequestsCustomizer> authorizeCustomizers,
 			ObjectProvider<ErasedSubjects> erasedSubjectsProvider,
 			ObjectProvider<ObjectMapper> jsonProvider,
@@ -72,17 +72,19 @@ public class ShopliteSecurityAutoConfiguration {
 		});
 
 		if (hasCustomer && hasStaff) {
-			JwtDecoder customerTokens = resolveCustomerDecoder(customerDecoderProvider, customerIssuer,
+			JwtDecoder customerTokens = resolveCustomerDecoder(decoderProvider, customerIssuer,
 					customerJwkSetUri, audiences);
 			JwtDecoder staffTokens = ShopliteJwtSupport.decoder(staffIssuer, staffJwkSetUri, audiences);
 			http.oauth2ResourceServer(rs -> rs.authenticationManagerResolver(
-					ShopliteJwtSupport.byIssuer(customerIssuer, customerTokens, staffIssuer, staffTokens)));
+					ShopliteJwtSupport.byIssuer(customerIssuer, customerTokens, staffIssuer, staffTokens,
+							properties.getStaffPrincipalClaim())));
 		}
 		else if (hasStaff) {
-			JwtDecoder staffTokens = customerDecoderProvider.getIfAvailable(
+			JwtDecoder staffTokens = decoderProvider.getIfAvailable(
 					() -> ShopliteJwtSupport.decoder(staffIssuer, staffJwkSetUri, audiences));
 			http.oauth2ResourceServer(rs -> rs.jwt(
-					jwt -> jwt.decoder(staffTokens).jwtAuthenticationConverter(ShopliteJwtSupport.staffConverter())));
+					jwt -> jwt.decoder(staffTokens)
+					.jwtAuthenticationConverter(ShopliteJwtSupport.staffConverter(properties.getStaffPrincipalClaim()))));
 		}
 		else {
 			http.oauth2ResourceServer(rs -> rs.jwt(jwt -> {
@@ -105,12 +107,12 @@ public class ShopliteSecurityAutoConfiguration {
 		return http.build();
 	}
 
-	private static JwtDecoder resolveCustomerDecoder(ObjectProvider<JwtDecoder> customerDecoderProvider,
+	private static JwtDecoder resolveCustomerDecoder(ObjectProvider<JwtDecoder> decoderProvider,
 			String customerIssuer, String customerJwkSetUri, List<String> audiences) {
 		if (!audiences.isEmpty()) {
 			return ShopliteJwtSupport.decoder(customerIssuer, customerJwkSetUri, audiences);
 		}
-		return customerDecoderProvider.getIfAvailable(
+		return decoderProvider.getIfAvailable(
 				() -> ShopliteJwtSupport.decoder(customerIssuer, customerJwkSetUri, audiences));
 	}
 

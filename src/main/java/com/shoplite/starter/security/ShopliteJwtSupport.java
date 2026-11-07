@@ -4,7 +4,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationManagerResolver;
 import org.springframework.security.core.GrantedAuthority;
@@ -60,8 +59,17 @@ public final class ShopliteJwtSupport {
 	 * to the opaque {@code sub} so logs and audit records never carry a username or email.
 	 */
 	public static JwtAuthenticationConverter staffConverter() {
+		return staffConverter(JwtClaimNames.SUB);
+	}
+
+	/**
+	 * Same as {@link #staffConverter()} with the principal claim chosen by the service. A service
+	 * that logged {@code preferred_username} before adopting the starter can keep doing so until it
+	 * decides to move to the opaque {@code sub}.
+	 */
+	public static JwtAuthenticationConverter staffConverter(String principalClaim) {
 		JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-		converter.setPrincipalClaimName(JwtClaimNames.SUB);
+		converter.setPrincipalClaimName(principalClaim);
 		converter.setJwtGrantedAuthoritiesConverter(ShopliteJwtSupport::staffGroups);
 		return converter;
 	}
@@ -114,9 +122,14 @@ public final class ShopliteJwtSupport {
 	/** Dual-realm resolver: picks the customer or staff authentication manager from the token's {@code iss}. */
 	public static AuthenticationManagerResolver<HttpServletRequest> byIssuer(String customerIssuer,
 			JwtDecoder customerTokens, String staffIssuer, JwtDecoder staffTokens) {
+		return byIssuer(customerIssuer, customerTokens, staffIssuer, staffTokens, JwtClaimNames.SUB);
+	}
+
+	public static AuthenticationManagerResolver<HttpServletRequest> byIssuer(String customerIssuer,
+			JwtDecoder customerTokens, String staffIssuer, JwtDecoder staffTokens, String staffPrincipalClaim) {
 		Map<String, AuthenticationManager> managers = Map.of(
 				customerIssuer, manager(customerTokens, customerConverter()),
-				staffIssuer, manager(staffTokens, staffConverter()));
+				staffIssuer, manager(staffTokens, staffConverter(staffPrincipalClaim)));
 		return new JwtIssuerAuthenticationManagerResolver(managers::get);
 	}
 
@@ -124,15 +137,6 @@ public final class ShopliteJwtSupport {
 		JwtAuthenticationProvider provider = new JwtAuthenticationProvider(decoder);
 		provider.setJwtAuthenticationConverter(converter);
 		return provider::authenticate;
-	}
-
-	/** Convenience overload when custom authority mapping is needed for a decoder. */
-	public static AuthenticationManager manager(JwtDecoder decoder,
-			Function<Jwt, Collection<GrantedAuthority>> authorities) {
-		JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-		converter.setPrincipalClaimName("preferred_username");
-		converter.setJwtGrantedAuthoritiesConverter(authorities::apply);
-		return manager(decoder, converter);
 	}
 
 }

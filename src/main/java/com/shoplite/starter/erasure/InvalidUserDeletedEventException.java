@@ -10,4 +10,8 @@ public class InvalidUserDeletedEventException extends RuntimeException {
 		super(message);
 	}
 
+	public InvalidUserDeletedEventException(String message, Throwable cause) {
+		super(message, cause);
+	}
+
 }
