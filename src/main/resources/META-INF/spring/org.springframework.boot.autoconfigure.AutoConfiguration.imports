@@ -1,0 +1,6 @@
+com.shoplite.starter.observability.ShopliteObservabilityAutoConfiguration
+com.shoplite.starter.web.ShopliteWebAutoConfiguration
+com.shoplite.starter.erasure.ShopliteErasureAutoConfiguration
+com.shoplite.starter.security.ShopliteSecurityAutoConfiguration
+com.shoplite.starter.outbox.ShopliteOutboxAutoConfiguration
+com.shoplite.starter.audit.ShopliteAuditAutoConfiguration

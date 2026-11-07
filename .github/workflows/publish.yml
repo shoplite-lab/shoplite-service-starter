@@ -1,0 +1,17 @@
+name: publish
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    uses: shoplite-lab/shoplite-ci-workflows/.github/workflows/java-publish.yml@v1
+    permissions:
+      contents: read
+      packages: write
