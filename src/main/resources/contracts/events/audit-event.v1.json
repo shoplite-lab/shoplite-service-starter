@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shoplite.internal/schemas/events/audit-event.v1.json",
+  "title": "AuditEventV1",
+  "type": "object",
+  "required": ["eventId", "eventType", "occurredAt", "actorSub", "action", "outcome"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "type": "string" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "actorSub": { "type": "string" },
+    "actorRealm": { "type": ["string", "null"] },
+    "action": { "type": "string" },
+    "targetType": { "type": ["string", "null"] },
+    "targetId": { "type": ["string", "null"] },
+    "outcome": { "type": "string" },
+    "traceId": { "type": ["string", "null"] },
+    "details": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

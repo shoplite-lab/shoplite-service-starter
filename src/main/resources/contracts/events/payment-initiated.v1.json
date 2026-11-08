@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shoplite.internal/schemas/events/payment-initiated.v1.json",
+  "title": "PaymentInitiatedEventV1",
+  "type": "object",
+  "required": ["eventId", "eventType", "occurredAt", "payload"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "payment.initiated" },
+    "schemaVersion": { "type": "string", "default": "1.0" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "aggregateId": { "type": ["string", "number"] },
+    "payload": {
+      "type": "object",
+      "required": ["paymentId", "paymentReference", "orderId", "userId", "provider", "amount"],
+      "properties": {
+        "paymentId": { "type": "integer" },
+        "paymentReference": { "type": "string" },
+        "orderId": { "type": "integer" },
+        "userId": { "type": "string" },
+        "provider": { "type": "string" },
+        "amount": { "type": "number", "minimum": 0 },
+        "pspTransactionNo": { "type": ["string", "null"] },
+        "reason": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
