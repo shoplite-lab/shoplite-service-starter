@@ -12,12 +12,14 @@ import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -56,13 +58,25 @@ import tools.jackson.databind.ObjectMapper;
 @EnableMethodSecurity
 public class ShopliteSecurityAutoConfiguration {
 
+	@Configuration(proxyBeanMethods = false)
+	@ConditionalOnClass(name = "org.springframework.data.redis.core.StringRedisTemplate")
+	static class RedisDPoPReplayCacheConfiguration {
+
+		@Bean
+		@ConditionalOnMissingBean(DPoPReplayCache.class)
+		@ConditionalOnBean(type = "org.springframework.data.redis.core.StringRedisTemplate")
+		public DPoPReplayCache redisDPoPReplayCache(ObjectProvider<StringRedisTemplate> redisProvider) {
+			StringRedisTemplate redis = redisProvider.getIfAvailable();
+			if (redis != null) {
+				return new RedisDPoPReplayCache(redis);
+			}
+			return new InMemoryDPoPReplayCache();
+		}
+	}
+
 	@Bean
 	@ConditionalOnMissingBean(DPoPReplayCache.class)
-	public DPoPReplayCache shopliteDPoPReplayCache(ObjectProvider<StringRedisTemplate> redisTemplateProvider) {
-		StringRedisTemplate redis = redisTemplateProvider.getIfAvailable();
-		if (redis != null) {
-			return new RedisDPoPReplayCache(redis);
-		}
+	public DPoPReplayCache inMemoryDPoPReplayCache() {
 		return new InMemoryDPoPReplayCache();
 	}
 
