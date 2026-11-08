@@ -6,7 +6,7 @@
   "required": ["eventId", "eventType", "occurredAt", "payload"],
   "properties": {
     "eventId": { "type": "string", "format": "uuid" },
-    "eventType": { "const": "payment.failed" },
+    "eventType": { "enum": ["payment.failed", "payment.expired"] },
     "schemaVersion": { "type": "string", "default": "1.0" },
     "occurredAt": { "type": "string", "format": "date-time" },
     "aggregateId": { "type": ["string", "number"] },

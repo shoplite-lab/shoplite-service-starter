@@ -87,6 +87,9 @@ public final class EventSchemaValidator {
 
 	private static String resolveSchemaPath(String eventType, int version) {
 		String normalized = eventType.replace('.', '-');
+		if ("payment-expired".equals(normalized)) {
+			normalized = "payment-failed";
+		}
 		return "/contracts/events/" + normalized + ".v" + version + ".json";
 	}
 
