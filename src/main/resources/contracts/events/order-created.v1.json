@@ -19,6 +19,8 @@
         "username": { "type": "string" },
         "totalAmount": { "type": "number", "minimum": 0 },
         "paymentMethod": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "customerName": { "type": "string" },
         "items": {
           "type": "array",
           "minItems": 1,
