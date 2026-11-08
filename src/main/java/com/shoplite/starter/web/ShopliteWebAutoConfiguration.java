@@ -26,4 +26,11 @@ public class ShopliteWebAutoConfiguration {
 		return new AccessLogFilter(properties.isIgnoreActuator());
 	}
 
+	@Bean
+	@ConditionalOnMissingBean(ShopliteProblemDetailsExceptionHandler.class)
+	@ConditionalOnProperty(name = "shoplite.web.problem-details.enabled", havingValue = "true", matchIfMissing = true)
+	public ShopliteProblemDetailsExceptionHandler shopliteProblemDetailsExceptionHandler() {
+		return new ShopliteProblemDetailsExceptionHandler();
+	}
+
 }

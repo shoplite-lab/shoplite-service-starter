@@ -4,3 +4,4 @@ com.shoplite.starter.erasure.ShopliteErasureAutoConfiguration
 com.shoplite.starter.security.ShopliteSecurityAutoConfiguration
 com.shoplite.starter.outbox.ShopliteOutboxAutoConfiguration
 com.shoplite.starter.audit.ShopliteAuditAutoConfiguration
+com.shoplite.starter.openapi.ShopliteOpenApiAutoConfiguration
