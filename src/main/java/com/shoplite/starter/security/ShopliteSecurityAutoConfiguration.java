@@ -2,6 +2,12 @@ package com.shoplite.starter.security;
 
 import com.shoplite.starter.erasure.ErasedSubjectFilter;
 import com.shoplite.starter.erasure.ErasedSubjects;
+import com.shoplite.starter.security.dpop.DPoPReplayCache;
+import com.shoplite.starter.security.dpop.DPoPValidator;
+import com.shoplite.starter.security.dpop.InMemoryDPoPReplayCache;
+import com.shoplite.starter.security.dpop.RedisDPoPReplayCache;
+import com.shoplite.starter.security.dpop.ShopliteDPoPFilter;
+import com.shoplite.starter.security.dpop.ShopliteDPoPProperties;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +18,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -23,13 +30,14 @@ import org.springframework.util.StringUtils;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Auto-configures ShopLite's stateless JWT resource server (ADR 0001, ADR 0002, ADR 0003):
+ * Auto-configures ShopLite's stateless JWT resource server (ADR 0001, ADR 0002, ADR 0003, ADR 0004):
  * <ul>
  * <li>Customer-only mode when only {@code spring.security.oauth2.resourceserver.jwt.issuer-uri} is set.</li>
  * <li>Staff-only mode when only {@code shoplite.staff-oidc.issuer-uri} is set.</li>
  * <li>Dual-realm mode (routed by {@code iss}) when both are set.</li>
  * <li>Automatically attaches {@link SubjectCaptureFilter} (for structured access logs) and, when an
  * {@link ErasedSubjects} bean exists, {@link ErasedSubjectFilter} (ADR 0002 tombstone check).</li>
+ * <li>Attaches {@link ShopliteDPoPFilter} for RFC 9449 sender-constrained token & replay protection (ADR 0004).</li>
  * </ul>
  */
 @AutoConfiguration(
@@ -44,17 +52,35 @@ import tools.jackson.databind.ObjectMapper;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnClass({ SecurityFilterChain.class, JwtAuthenticationToken.class })
 @ConditionalOnProperty(name = "shoplite.security.enabled", havingValue = "true", matchIfMissing = true)
-@EnableConfigurationProperties(ShopliteSecurityProperties.class)
+@EnableConfigurationProperties({ ShopliteSecurityProperties.class, ShopliteDPoPProperties.class })
 @EnableMethodSecurity
 public class ShopliteSecurityAutoConfiguration {
+
+	@Bean
+	@ConditionalOnMissingBean(DPoPReplayCache.class)
+	public DPoPReplayCache shopliteDPoPReplayCache(ObjectProvider<StringRedisTemplate> redisTemplateProvider) {
+		StringRedisTemplate redis = redisTemplateProvider.getIfAvailable();
+		if (redis != null) {
+			return new RedisDPoPReplayCache(redis);
+		}
+		return new InMemoryDPoPReplayCache();
+	}
+
+	@Bean
+	@ConditionalOnMissingBean(DPoPValidator.class)
+	public DPoPValidator shopliteDPoPValidator(DPoPReplayCache replayCache, ShopliteDPoPProperties dpopProperties) {
+		return new DPoPValidator(replayCache, dpopProperties.getClockSkew());
+	}
 
 	@Bean
 	@ConditionalOnMissingBean(SecurityFilterChain.class)
 	public SecurityFilterChain shopliteSecurityFilterChain(HttpSecurity http,
 			ShopliteSecurityProperties properties,
+			ShopliteDPoPProperties dpopProperties,
 			ObjectProvider<JwtDecoder> decoderProvider,
 			ObjectProvider<ShopliteAuthorizeRequestsCustomizer> authorizeCustomizers,
 			ObjectProvider<ErasedSubjects> erasedSubjectsProvider,
+			ObjectProvider<DPoPValidator> dpopValidatorProvider,
 			ObjectProvider<ObjectMapper> jsonProvider,
 			@Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:}") String customerIssuer,
 			@Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:}") String customerJwkSetUri,
@@ -100,6 +126,13 @@ public class ShopliteSecurityAutoConfiguration {
 		if (erasedSubjects != null) {
 			ObjectMapper json = jsonProvider.getIfAvailable(ObjectMapper::new);
 			http.addFilterAfter(new ErasedSubjectFilter(erasedSubjects, json), BearerTokenAuthenticationFilter.class);
+		}
+
+		if (dpopProperties.isEnabled()) {
+			DPoPValidator dpopValidator = dpopValidatorProvider.getIfAvailable(
+					() -> new DPoPValidator(new InMemoryDPoPReplayCache(), dpopProperties.getClockSkew()));
+			ObjectMapper json = jsonProvider.getIfAvailable(ObjectMapper::new);
+			http.addFilterAfter(new ShopliteDPoPFilter(dpopValidator, dpopProperties, json), BearerTokenAuthenticationFilter.class);
 		}
 
 		http.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
