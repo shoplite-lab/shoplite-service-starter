@@ -53,9 +53,9 @@ class CursorTokenTests {
 
 	@Test
 	void decodeNonJsonThrowsInvalidCursorException() {
-		// Base64Url string for "plain text string"
-		String invalidJsonToken = "cGxhaW4gdGV4dCBzdHJpbmc";
-		assertThatThrownBy(() -> CursorToken.decode(invalidJsonToken))
+		String invalidJson = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString("plain text string".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		assertThatThrownBy(() -> CursorToken.decode(invalidJson))
 				.isInstanceOf(InvalidCursorException.class);
 	}
 
