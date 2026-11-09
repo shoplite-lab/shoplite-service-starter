@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -16,3 +17,6 @@ concurrency:
 jobs:
   test:
     uses: shoplite-lab/shoplite-ci-workflows/.github/workflows/java-ci.yml@v1
+    permissions:
+      contents: read
+      packages: read
