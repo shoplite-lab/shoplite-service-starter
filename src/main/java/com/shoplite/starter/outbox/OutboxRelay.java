@@ -66,7 +66,7 @@ public class OutboxRelay {
 		for (int i = 0; i < rows.size(); i++) {
 			OutboxStore.OutboxRow row = rows.get(i);
 			try {
-				publisher.send(row.aggregateId(), row.eventType(), row.payload());
+				publisher.send(row.aggregateId(), row.eventType(), row.payload(), row.traceparent());
 				store.markSent(row.id());
 				metrics.recordSent();
 				sent++;

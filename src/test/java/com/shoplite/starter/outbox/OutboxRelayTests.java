@@ -109,22 +109,42 @@ class OutboxRelayTests {
 		assertThat(registry.get("outbox.failed").gauge().value()).isEqualTo(1.0);
 	}
 
+	@Test
+	void relayPassesTraceparentToPublisher() {
+		when(store.claim(20, 100)).thenReturn(List.of(
+				new OutboxStore.OutboxRow(1L, "order-1", "order.created", "{\"id\":1}", 1, "00-testtrace-testspan-01")));
+
+		OutboxRelay.RunResult result = relay.runOnce();
+
+		assertThat(result.sent()).isEqualTo(1);
+		assertThat(publisher.sentTraceparents).containsExactly("00-testtrace-testspan-01");
+	}
+
 	static class RecordingPublisher implements OutboxPublisher {
 
 		final List<String> sentAggregates = new ArrayList<>();
+
+		final List<String> sentTraceparents = new ArrayList<>();
 
 		final AtomicBoolean failAll = new AtomicBoolean(false);
 
 		@Override
 		public void send(String aggregateId, String eventType, String payload) {
+			send(aggregateId, eventType, payload, null);
+		}
+
+		@Override
+		public void send(String aggregateId, String eventType, String payload, String traceparent) {
 			if (failAll.get()) {
 				throw new IllegalStateException("broker unreachable");
 			}
 			sentAggregates.add(aggregateId);
+			sentTraceparents.add(traceparent);
 		}
 
 		void reset() {
 			sentAggregates.clear();
+			sentTraceparents.clear();
 			failAll.set(false);
 		}
 

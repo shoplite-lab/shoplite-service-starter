@@ -3,6 +3,7 @@ package com.shoplite.starter.audit;
 import com.shoplite.starter.outbox.OutboxStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -37,6 +38,9 @@ public class CompositeOutboxAuditRecorder implements AuditRecorder {
 		}
 		catch (Exception e) {
 			log.error("Failed to enqueue audit event {} to outbox", event.eventId(), e);
+			if (TransactionSynchronizationManager.isActualTransactionActive()) {
+				throw (e instanceof RuntimeException re ? re : new IllegalStateException("Failed to enqueue audit event to outbox", e));
+			}
 		}
 	}
 

@@ -9,4 +9,8 @@ public interface OutboxPublisher {
 
 	void send(String aggregateId, String eventType, String payload) throws Exception;
 
+	default void send(String aggregateId, String eventType, String payload, String traceparent) throws Exception {
+		send(aggregateId, eventType, payload);
+	}
+
 }

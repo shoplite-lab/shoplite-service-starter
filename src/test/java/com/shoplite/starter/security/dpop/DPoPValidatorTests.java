@@ -158,4 +158,14 @@ class DPoPValidatorTests {
 			.hasMessageContaining("Replay detected");
 	}
 
+	@Test
+	@DisplayName("DPoP proof with query string or fragment strips them and matches request URI")
+	void queryStringAndFragmentInHtu_areStripped() throws Exception {
+		String token = "mock.access.token";
+		String proof = createDPoPProof(clientKey, "GET", "/api/orders/mine/cursor?limit=20&cursor=abc#frag", token, Instant.now(), UUID.randomUUID().toString());
+
+		assertThatCode(() -> validator.validate(proof, token, "GET", "/api/orders/mine/cursor", clientJkt))
+			.doesNotThrowAnyException();
+	}
+
 }

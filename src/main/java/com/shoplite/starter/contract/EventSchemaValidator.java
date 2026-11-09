@@ -86,7 +86,7 @@ public final class EventSchemaValidator {
 	}
 
 	private static String resolveSchemaPath(String eventType, int version) {
-		String normalized = eventType.replace('.', '-');
+		String normalized = eventType.replace('.', '-').replace('_', '-');
 		if ("payment-expired".equals(normalized)) {
 			normalized = "payment-failed";
 		}

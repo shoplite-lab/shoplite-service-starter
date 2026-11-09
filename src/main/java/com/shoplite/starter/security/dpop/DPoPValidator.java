@@ -142,12 +142,22 @@ public class DPoPValidator {
 					"DPoP proof htm claim (" + htm + ") does not match request method (" + method + ")");
 		}
 
-		// 6c. htu claim (HTTP target URI / path)
+		// 6c. htu claim (HTTP target URI / path, RFC 9449 §4.2: must not contain query or fragment)
 		if (htu == null || htu.isBlank()) {
 			throw new DPoPValidationException("invalid_dpop_proof", "DPoP proof htu claim is required");
 		}
 		String htuPath = htu.contains("://") ? URI.create(htu).getPath() : htu;
-		if (!htuPath.equalsIgnoreCase(requestUri)) {
+		if (htuPath != null) {
+			int queryIdx = htuPath.indexOf('?');
+			if (queryIdx >= 0) {
+				htuPath = htuPath.substring(0, queryIdx);
+			}
+			int fragIdx = htuPath.indexOf('#');
+			if (fragIdx >= 0) {
+				htuPath = htuPath.substring(0, fragIdx);
+			}
+		}
+		if (!requestUri.equalsIgnoreCase(htuPath)) {
 			throw new DPoPValidationException("invalid_dpop_proof",
 					"DPoP proof htu path (" + htuPath + ") does not match request URI (" + requestUri + ")");
 		}
