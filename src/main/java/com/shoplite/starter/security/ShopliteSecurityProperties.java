@@ -27,6 +27,46 @@ public class ShopliteSecurityProperties {
 	 */
 	private String staffPrincipalClaim = "sub";
 
+	private String customerIssuerUri;
+
+	private String customerJwkSetUri;
+
+	private String staffIssuerUri;
+
+	private String staffJwkSetUri;
+
+	public String getCustomerIssuerUri() {
+		return customerIssuerUri;
+	}
+
+	public void setCustomerIssuerUri(String customerIssuerUri) {
+		this.customerIssuerUri = customerIssuerUri;
+	}
+
+	public String getCustomerJwkSetUri() {
+		return customerJwkSetUri;
+	}
+
+	public void setCustomerJwkSetUri(String customerJwkSetUri) {
+		this.customerJwkSetUri = customerJwkSetUri;
+	}
+
+	public String getStaffIssuerUri() {
+		return staffIssuerUri;
+	}
+
+	public void setStaffIssuerUri(String staffIssuerUri) {
+		this.staffIssuerUri = staffIssuerUri;
+	}
+
+	public String getStaffJwkSetUri() {
+		return staffJwkSetUri;
+	}
+
+	public void setStaffJwkSetUri(String staffJwkSetUri) {
+		this.staffJwkSetUri = staffJwkSetUri;
+	}
+
 	public String getStaffPrincipalClaim() {
 		return staffPrincipalClaim;
 	}

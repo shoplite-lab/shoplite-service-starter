@@ -96,14 +96,19 @@ public class ShopliteSecurityAutoConfiguration {
 			ObjectProvider<ErasedSubjects> erasedSubjectsProvider,
 			ObjectProvider<DPoPValidator> dpopValidatorProvider,
 			ObjectProvider<ObjectMapper> jsonProvider,
-			@Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:}") String customerIssuer,
-			@Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:}") String customerJwkSetUri,
-			@Value("${shoplite.staff-oidc.issuer-uri:}") String staffIssuer,
-			@Value("${shoplite.staff-oidc.jwk-set-uri:}") String staffJwkSetUri) throws Exception {
+			@Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:${shoplite.security.customer-issuer-uri:${OIDC_ISSUER_URI:}}}") String customerIssuer,
+			@Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:${shoplite.security.customer-jwk-set-uri:${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI:}}}") String customerJwkSetUri,
+			@Value("${shoplite.staff-oidc.issuer-uri:${shoplite.security.staff-issuer-uri:${STAFF_OIDC_ISSUER_URI:}}}") String staffIssuer,
+			@Value("${shoplite.staff-oidc.jwk-set-uri:${shoplite.security.staff-jwk-set-uri:${STAFF_OIDC_JWK_SET_URI:}}}") String staffJwkSetUri) throws Exception {
+
+		final String effectiveCustomerIssuer = StringUtils.hasText(customerIssuer) ? customerIssuer : properties.getCustomerIssuerUri();
+		final String effectiveCustomerJwkSetUri = StringUtils.hasText(customerJwkSetUri) ? customerJwkSetUri : properties.getCustomerJwkSetUri();
+		final String effectiveStaffIssuer = StringUtils.hasText(staffIssuer) ? staffIssuer : properties.getStaffIssuerUri();
+		final String effectiveStaffJwkSetUri = StringUtils.hasText(staffJwkSetUri) ? staffJwkSetUri : properties.getStaffJwkSetUri();
 
 		List<String> audiences = properties.getAudiences();
-		boolean hasCustomer = StringUtils.hasText(customerIssuer);
-		boolean hasStaff = StringUtils.hasText(staffIssuer);
+		boolean hasCustomer = StringUtils.hasText(effectiveCustomerIssuer);
+		boolean hasStaff = StringUtils.hasText(effectiveStaffIssuer);
 
 		http.authorizeHttpRequests(auth -> {
 			auth.requestMatchers("/actuator/**").permitAll();
@@ -112,16 +117,16 @@ public class ShopliteSecurityAutoConfiguration {
 		});
 
 		if (hasCustomer && hasStaff) {
-			JwtDecoder customerTokens = resolveCustomerDecoder(decoderProvider, customerIssuer,
-					customerJwkSetUri, audiences);
-			JwtDecoder staffTokens = ShopliteJwtSupport.decoder(staffIssuer, staffJwkSetUri, audiences);
+			JwtDecoder customerTokens = resolveCustomerDecoder(decoderProvider, effectiveCustomerIssuer,
+					effectiveCustomerJwkSetUri, audiences);
+			JwtDecoder staffTokens = ShopliteJwtSupport.decoder(effectiveStaffIssuer, effectiveStaffJwkSetUri, audiences);
 			http.oauth2ResourceServer(rs -> rs.authenticationManagerResolver(
-					ShopliteJwtSupport.byIssuer(customerIssuer, customerTokens, staffIssuer, staffTokens,
+					ShopliteJwtSupport.byIssuer(effectiveCustomerIssuer, customerTokens, effectiveStaffIssuer, staffTokens,
 							properties.getStaffPrincipalClaim())));
 		}
 		else if (hasStaff) {
 			JwtDecoder staffTokens = decoderProvider.getIfAvailable(
-					() -> ShopliteJwtSupport.decoder(staffIssuer, staffJwkSetUri, audiences));
+					() -> ShopliteJwtSupport.decoder(effectiveStaffIssuer, effectiveStaffJwkSetUri, audiences));
 			http.oauth2ResourceServer(rs -> rs.jwt(
 					jwt -> jwt.decoder(staffTokens)
 					.jwtAuthenticationConverter(ShopliteJwtSupport.staffConverter(properties.getStaffPrincipalClaim()))));
@@ -129,7 +134,7 @@ public class ShopliteSecurityAutoConfiguration {
 		else {
 			http.oauth2ResourceServer(rs -> rs.jwt(jwt -> {
 				if (!audiences.isEmpty() && hasCustomer) {
-					jwt.decoder(ShopliteJwtSupport.decoder(customerIssuer, customerJwkSetUri, audiences));
+					jwt.decoder(ShopliteJwtSupport.decoder(effectiveCustomerIssuer, effectiveCustomerJwkSetUri, audiences));
 				}
 				jwt.jwtAuthenticationConverter(ShopliteJwtSupport.customerConverter());
 			}));

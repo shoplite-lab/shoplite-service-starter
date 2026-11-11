@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.shoplite</groupId>
 	<artifactId>shoplite-service-starter</artifactId>
-	<version>0.1.0</version>
+	<version>0.1.1</version>
 	<name>shoplite-service-starter</name>
 	<description>ShopLite internal Spring Boot starter: technical cross-cutting auto-configuration (dual-realm JWT + audience, erasure tombstone, structured access log, outbox relay, Kafka DLT, audit API)</description>
 

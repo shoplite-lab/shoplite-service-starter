@@ -66,6 +66,9 @@ public class ShopliteDPoPFilter extends OncePerRequestFilter {
 
 		Jwt jwt = jwtAuth.getToken();
 		Map<String, Object> cnf = jwt.getClaimAsMap("cnf");
+		if (cnf == null) {
+			cnf = jwt.getClaimAsMap("dpop_cnf");
+		}
 		String jkt = cnf != null ? (String) cnf.get("jkt") : null;
 
 		boolean isDPoPBound = jkt != null && !jkt.isBlank();

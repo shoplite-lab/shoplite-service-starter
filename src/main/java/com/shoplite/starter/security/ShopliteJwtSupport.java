@@ -2,8 +2,11 @@ package com.shoplite.starter.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationManagerResolver;
 import org.springframework.security.core.GrantedAuthority;
@@ -43,22 +46,38 @@ public final class ShopliteJwtSupport {
 	}
 
 	/**
+	 * Adapts DPoP-bound tokens presented over the Bearer scheme: Spring Security 7's
+	 * {@code BearerTokenAuthenticationFilter} strictly rejects tokens containing {@code cnf.jkt}.
+	 * We preserve the binding under {@code dpop_cnf} so {@link com.shoplite.starter.security.dpop.ShopliteDPoPFilter}
+	 * can enforce the RFC 9449 proof check without Spring Security short-circuiting.
+	 */
+	public static Jwt adaptDPoPJwt(Jwt jwt) {
+		if (jwt != null && jwt.getClaims().containsKey("cnf")) {
+			Map<String, Object> claims = new LinkedHashMap<>(jwt.getClaims());
+			Object cnf = claims.remove("cnf");
+			claims.put("dpop_cnf", cnf);
+			return new Jwt(jwt.getTokenValue(), jwt.getIssuedAt(), jwt.getExpiresAt(), jwt.getHeaders(), claims);
+		}
+		return jwt;
+	}
+
+	/**
 	 * Customer realm converter: maps {@code realm_access.roles} to {@code ROLE_*} and keeps
 	 * {@code preferred_username} as the principal name for backward compatibility with existing
 	 * controllers; the opaque {@code sub} is always read via {@link Jwt#getSubject()}.
 	 */
-	public static JwtAuthenticationConverter customerConverter() {
+	public static Converter<Jwt, ? extends AbstractAuthenticationToken> customerConverter() {
 		JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
 		converter.setPrincipalClaimName("preferred_username");
 		converter.setJwtGrantedAuthoritiesConverter(ShopliteJwtSupport::realmRoles);
-		return converter;
+		return jwt -> converter.convert(adaptDPoPJwt(jwt));
 	}
 
 	/**
 	 * Staff realm converter: maps {@code groups} to {@code STAFF_*} and sets the principal name
 	 * to the opaque {@code sub} so logs and audit records never carry a username or email.
 	 */
-	public static JwtAuthenticationConverter staffConverter() {
+	public static Converter<Jwt, ? extends AbstractAuthenticationToken> staffConverter() {
 		return staffConverter(JwtClaimNames.SUB);
 	}
 
@@ -67,11 +86,11 @@ public final class ShopliteJwtSupport {
 	 * that logged {@code preferred_username} before adopting the starter can keep doing so until it
 	 * decides to move to the opaque {@code sub}.
 	 */
-	public static JwtAuthenticationConverter staffConverter(String principalClaim) {
+	public static Converter<Jwt, ? extends AbstractAuthenticationToken> staffConverter(String principalClaim) {
 		JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
 		converter.setPrincipalClaimName(principalClaim);
 		converter.setJwtGrantedAuthoritiesConverter(ShopliteJwtSupport::staffGroups);
-		return converter;
+		return jwt -> converter.convert(adaptDPoPJwt(jwt));
 	}
 
 	/** Customer realm: {@code realm_access.roles} become {@code ROLE_*}. */
@@ -133,7 +152,8 @@ public final class ShopliteJwtSupport {
 		return new JwtIssuerAuthenticationManagerResolver(managers::get);
 	}
 
-	private static AuthenticationManager manager(JwtDecoder decoder, JwtAuthenticationConverter converter) {
+	private static AuthenticationManager manager(JwtDecoder decoder,
+			Converter<Jwt, ? extends AbstractAuthenticationToken> converter) {
 		JwtAuthenticationProvider provider = new JwtAuthenticationProvider(decoder);
 		provider.setJwtAuthenticationConverter(converter);
 		return provider::authenticate;
