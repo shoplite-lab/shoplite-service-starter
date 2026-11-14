@@ -1,4 +1,5 @@
 com.shoplite.starter.observability.ShopliteObservabilityAutoConfiguration
+com.shoplite.starter.datasource.ShopliteDataSourceRoutingAutoConfiguration
 com.shoplite.starter.web.ShopliteWebAutoConfiguration
 com.shoplite.starter.erasure.ShopliteErasureAutoConfiguration
 com.shoplite.starter.security.ShopliteSecurityAutoConfiguration
